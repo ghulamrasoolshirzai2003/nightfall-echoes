@@ -1,0 +1,9 @@
+name: Test Workflow 2
+# testing an em dash — right here
+on:
+  workflow_dispatch:
+jobs:
+  hello:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "hello"
