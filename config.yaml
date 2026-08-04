@@ -1,0 +1,138 @@
+# =============================================================
+#  Nightfall Echoes — channel configuration
+#  Tweak these to change the channel's style. No code changes needed.
+# =============================================================
+
+channel:
+  name: "Nightfall Echoes"
+  emoji: "🌙"
+
+# The moods the pipeline rotates through. Each run picks one (weighted-random).
+# Add/remove freely. `prompt` feeds MusicGen; `keywords` feed titles/tags/thumbnail.
+moods:
+  - name: "midnight lofi"
+    weight: 3
+    music_prompt: "calm lo-fi hip hop, soft vinyl crackle, mellow piano, late night study beat, relaxing, 70 bpm"
+    keywords: ["lofi", "study", "chill beats", "late night", "relax"]
+    visual: "cozy dark bedroom at night, warm lamp light, rain on window, anime lofi aesthetic, moon outside"
+
+  - name: "sad piano"
+    weight: 2
+    music_prompt: "emotional sad solo piano, slow, cinematic, melancholic, reverb, minor key, 60 bpm"
+    keywords: ["sad piano", "emotional", "heartbreak", "cinematic", "cry"]
+    visual: "lonely figure by a rainy window at night, blue moody tones, cinematic, melancholic"
+
+  - name: "ambient sleep"
+    weight: 2
+    music_prompt: "soft ambient sleep music, warm pads, gentle drone, dreamy, no drums, very slow, calming"
+    keywords: ["sleep music", "relaxing", "ambient", "calm", "meditation"]
+    visual: "dreamy starry night sky over calm ocean, soft glow, ethereal, peaceful, moonlight"
+
+  - name: "rainy night"
+    weight: 2
+    music_prompt: "relaxing rainy night lofi, soft piano, distant thunder, cozy, warm, 72 bpm"
+    keywords: ["rain sounds", "lofi", "sleep", "cozy", "relax"]
+    visual: "neon city street in the rain at night, reflections, cinematic, lofi anime style"
+
+music:
+  # Seconds of ORIGINAL audio MusicGen generates (kept short = fast + free on CPU).
+  # musicgen-small has a hard ceiling of ~30s per generation (its position
+  # embedding table only covers 2048 tokens @ ~50 tokens/sec) — src/music.py
+  # clamps to that automatically even if this is set higher.
+  seed_seconds: 30
+  # Final track length; ffmpeg seamlessly loops the seed up to this.
+  target_seconds: 180
+  model: "facebook/musicgen-small"   # small = runs on free CPU runners
+
+video:
+  width: 1280
+  height: 720
+  fps: 25             # needed for smooth zoom motion (was 1 = fully static)
+  zoom_speed: 0.0004   # slow push-in across the whole 3-min track
+  zoom_max: 1.15        # gentle — reaches max zoom gradually, then holds
+
+shorts:
+  # Shorts are the real free growth lever for an instrumental channel — the
+  # algorithm pushes them to new viewers far more than long-form videos.
+  enabled: true
+  width: 1080
+  height: 1920
+  duration_seconds: 30    # matches the ~30s freshest (unlooped) music clip
+  fps: 25
+  zoom_speed: 0.0015      # faster push-in — a short clip should feel punchier
+  zoom_max: 1.4
+
+upload:
+  privacy: "public"        # public | unlisted | private
+  category_id: "10"        # 10 = Music
+  made_for_kids: false
+  # Extra tags always appended to the Gemini-generated ones:
+  base_tags: ["nightfall echoes", "no copyright music", "royalty free", "aesthetic"]
+
+# =============================================================
+#  Suno + Telegram workflow (vocal songs, human-in-the-loop)
+#  Separate from the fully-automatic instrumental system above.
+#  See src/send_daily_prompt.py + src/poll_telegram.py.
+# =============================================================
+suno:
+  # Each style is ORIGINAL genre/mood direction, never a real song or artist
+  # name — see src/suno_prompt.py for why that distinction matters right now.
+  # Channel focus: German rap (Deutschrap) — src/suno_prompt.py's Gemini
+  # prompt writes lyrics entirely in authentic German regardless of the
+  # (English) fields below, which just steer style/theme/visuals.
+  # `visual` feeds the AI thumbnail image; `stock_query` feeds the real
+  # stock-footage search (src/stock_video.py) used for the video itself —
+  # keep it short and concrete, unlike the descriptive `visual` prompt.
+  styles:
+    - name: "Deutschrap Strassenrap"
+      weight: 3
+      style_tags: "German rap, Deutschrap, street rap, hard-hitting 808s, gritty raw sound, aggressive confident flow"
+      lyric_theme: "Straßenleben, Aufstieg von unten, Loyalität, Respekt"
+      visual: "gritty urban street at night, graffiti walls, dramatic streetlight, cinematic European city"
+      stock_query: "urban street night graffiti"
+
+    - name: "Deutschrap Trap Autotune"
+      weight: 3
+      style_tags: "German rap, Deutschrap trap, heavy autotune vocals, melodic trap beat, deep 808 bass, modern production"
+      lyric_theme: "Party, Erfolg, Nightlife, schnelles Geld"
+      visual: "neon nightclub, luxury car at night, city lights, energetic party atmosphere"
+      stock_query: "nightclub party lights night"
+
+    - name: "Deutschrap Gangsta"
+      weight: 2
+      style_tags: "German rap, Deutschrap, dark gangsta rap, hard bassline, intense aggressive delivery"
+      lyric_theme: "Kampf, Überleben, Misstrauen, Stolz"
+      visual: "dark alley at night, moody European city backstreets, dramatic shadows, cinematic"
+      stock_query: "dark alley urban night"
+
+    - name: "Deutschrap Emotional"
+      weight: 2
+      style_tags: "German rap, Deutschrap, emotional rap, melodic hook, introspective, piano-driven trap production"
+      lyric_theme: "Einsamkeit, Zweifel, Hoffnung, verlorene Liebe"
+      visual: "lonely figure in a rainy European city at night, moody blue tones, cinematic, introspective"
+      stock_query: "person alone city night rain"
+
+telegram:
+  poll_interval_minutes: 15
+
+lyric_video:
+  # "Story video" build: transcribes the real Suno audio (word-level), chunks
+  # it into natural phrase scenes (a new scene starts at each real vocal
+  # pause, not a fixed time slice), snaps cut points to the beat, matches
+  # real footage per scene, burns in synced captions.
+  whisper_model: "small"   # tiny/base/small/medium — bigger = more accurate, slower
+  # Tuned down from 0.45/7.0 after testing on a real rap song: dense rap flow
+  # has shorter natural gaps between bars than 0.45s, so almost everything
+  # was hitting the 7s cap instead of cutting on real pauses. Tighter values
+  # give punchier, more precisely-synced pacing closer to real rap-video edits.
+  pause_threshold: 0.25     # seconds of silence between words that counts as a natural break
+  max_scene_seconds: 4.5    # force a cut even mid-phrase if a run of words gets longer than this
+  min_scene_seconds: 1.0    # merge a chunk shorter than this into its neighbor (avoids tiny fragments)
+  beat_tolerance: 0.35      # snap a cut to the nearest beat if within this many seconds
+
+  # Captions are chunked SEPARATELY and much finer than the scene cuts above —
+  # a few words at a time, changing every 1-2s, tightly tracking the vocal
+  # (like real short-form lyric videos), not one long sentence per shot.
+  caption_max_words: 4          # hard cap on words per caption burst
+  caption_max_seconds: 2.2      # also cap by duration so slow-sung words don't linger
+  caption_pause_threshold: 0.25 # a shorter gap already starts a new caption burst

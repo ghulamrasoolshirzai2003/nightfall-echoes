@@ -1,0 +1,24 @@
+# --- Creative brain (free Gemini API) ---
+requests>=2.31.0
+
+# --- Music generation (MusicGen via transformers) ---
+torch>=2.2.0
+transformers>=4.40.0
+scipy>=1.11.0
+
+# --- Thumbnail ---
+Pillow>=10.0.0
+
+# --- YouTube upload ---
+google-api-python-client>=2.100.0
+google-auth>=2.23.0
+google-auth-oauthlib>=1.1.0
+google-auth-httplib2>=0.1.1
+
+# --- Config / utils ---
+PyYAML>=6.0
+python-dotenv>=1.0.0
+
+# NOTE: ffmpeg is a system binary, not a pip package.
+# GitHub Actions installs it via the workflow; locally install it from ffmpeg.org
+# (Windows: `winget install Gyan.FFmpeg`).

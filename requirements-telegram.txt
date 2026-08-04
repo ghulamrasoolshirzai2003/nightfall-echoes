@@ -1,0 +1,15 @@
+# Lightweight deps for the Suno+Telegram workflow (daily_prompt.yml,
+# poll_telegram.yml). Deliberately excludes torch/transformers/scipy — those
+# are only needed by the MusicGen path (requirements.txt), and installing
+# PyTorch on every 15-min poll run would be slow and wasteful.
+requests>=2.31.0
+Pillow>=10.0.0
+PyYAML>=6.0
+python-dotenv>=1.0.0
+
+# Real audio transcription for the "story video" scene-matching + subtitles
+# (src/transcribe.py). CTranslate2-backed — no torch/GPU needed.
+faster-whisper>=1.0.0
+
+# Beat detection (src/beats.py) — snaps scene cuts to the song's rhythm.
+librosa>=0.10.0
