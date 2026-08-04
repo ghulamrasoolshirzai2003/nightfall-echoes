@@ -55,12 +55,19 @@ def _extract_audio(update: dict):
     return None
 
 
-def _description(song: dict, style_name: str) -> str:
-    return (
-        f"{song['title']} — an original {style_name} song.\n\n"
-        "100% original lyrics and music, made for this channel.\n\n"
-        f"#{style_name.replace(' ', '')} #originalsong #newmusic"
+def _details_message(song: dict) -> str:
+    """Full copy-paste-ready package for whoever uploads this — title,
+    YouTube-ready description, and the full tag list, not just a caption
+    snippet (Telegram video captions cap at 1024 chars, too short for this)."""
+    tags = song.get("tags", [])
+    tags_line = ", ".join(tags) if tags else "(none generated)"
+    message = (
+        f"📋 Full details for: {song['title']}\n\n"
+        f"TITLE:\n{song['title']}\n\n"
+        f"DESCRIPTION:\n{song.get('description', '(none generated)')}\n\n"
+        f"TAGS:\n{tags_line}"
     )
+    return message[:4096]  # Telegram's hard message-length limit
 
 
 def run():
@@ -89,18 +96,18 @@ def run():
         song = pending["song"]
         mood_like = {"visual": pending["visual"]}
         title = song["title"]
-        caption = f"{title}\n\n{_description(song, pending['style_name'])}"[:1024]
 
         background_path, thumb_path = thumbnail.make_thumbnail(mood_like, title)
         video_path = _build_video(song.get("style_tags", pending["style_name"]),
                                    pending.get("stock_query"), background_path, audio_path)
 
         telegram_bot.send_photo(thumb_path, caption=f"Thumbnail: {title}")
-        telegram_bot.send_video(video_path, caption=caption)
+        telegram_bot.send_video(video_path, caption=title)
+        telegram_bot.send_message(_details_message(song))
 
         pending = None
         st["pending"] = None
-        print("[poll_telegram] Sent finished video to Telegram.")
+        print("[poll_telegram] Sent finished video + full details to Telegram.")
 
     state.save(st)
 

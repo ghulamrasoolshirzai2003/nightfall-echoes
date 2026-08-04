@@ -37,6 +37,9 @@ real Deutschrap slang, flow, and street vocabulary, not a stiff textbook
 translation from English. The title should be in German (or a natural
 German/English mix, which is common in real Deutschrap song titles).
 
+Also write the full metadata package needed to publish this song once it's
+made — a real YouTube-ready description and a real tag list, not placeholders.
+
 Return ONLY valid JSON (no markdown fences) with exactly these keys:
 - "title": a catchy original German (or German/English mix) song title.
 - "style_tags": a comma-separated string of Suno "Style of Music" tags IN
@@ -45,6 +48,13 @@ Return ONLY valid JSON (no markdown fences) with exactly these keys:
 - "lyrics": full original German lyrics using [Verse 1], [Chorus],
   [Verse 2], [Chorus], [Bridge], [Chorus] section tags, ready to paste into
   Suno's custom lyrics box. Written entirely in German.
+- "description": a 3-5 sentence YouTube video description IN GERMAN, written
+  for discovery (natural, searchable phrasing, not a keyword dump), mentioning
+  it's an original song, ending with a short line inviting the listener to
+  follow/subscribe.
+- "tags": an array of 12-18 relevant lowercase search tags (mix of German and
+  English), e.g. genre, mood, and topical terms someone would search for this
+  kind of song.
 """
 
 
@@ -56,8 +66,9 @@ def pick_style() -> dict:
 
 def _fallback(style: dict) -> dict:
     theme = style["lyric_theme"].split(",")[0].strip()
+    title = f"{style['name'].title()} Heute Nacht"
     return {
-        "title": f"{style['name'].title()} Heute Nacht",
+        "title": title,
         "style_tags": style["style_tags"],
         "lyrics": (
             f"[Verse 1]\nIch geh durch die {theme}, spür die Straße unter mir\n"
@@ -72,6 +83,13 @@ def _fallback(style: dict) -> dict:
             "[Chorus]\nDas ist unser Moment, wir brechen durch\n"
             "Nichts hält uns auf, wir geben nicht auf\n"
         ),
+        "description": (
+            f"{title} — ein originaler Deutschrap-Song. 100% Original, "
+            "Text und Musik. Folge dem Kanal für mehr.\n\n"
+            f"#deutschrap #{style['name'].lower().replace(' ', '')} #newmusic"
+        ),
+        "tags": [style["name"].lower(), "deutschrap", "german rap", "original song",
+                 "new music", "rap deutsch"] + [w.strip() for w in style["lyric_theme"].split(",")],
     }
 
 
