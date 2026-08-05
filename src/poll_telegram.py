@@ -138,6 +138,13 @@ def run():
         file_id, file_name = found
 
         print(f"[poll_telegram] Received {file_name}, building final video...")
+        # Immediate feedback — otherwise there's total silence for the ~5-10
+        # min it takes to build the video, and no way to tell it was even
+        # received vs. still waiting on the next poll cycle.
+        telegram_bot.send_message(
+            f"🎧 Got \"{file_name}\" — generating your video now. "
+            "This usually takes about 5-10 minutes, I'll send it here when it's ready."
+        )
         audio_path = telegram_bot.download_file(file_id, "suno_song.mp3")
 
         if pending:
