@@ -277,6 +277,15 @@ def mux_with_audio_and_captions(silent_video_path: str, audio_path: str, segment
             )
     vf = ",".join(parts) if parts else "null"
 
+    # Cap bitrate so the file stays safely under Telegram's 50MB bot-upload
+    # limit regardless of song length or how much motion/detail the footage
+    # has — plain CRF alone hit 49.3MB on a real busy multi-scene test, too
+    # close to the ceiling. Budgeted per-second so longer songs scale down
+    # automatically instead of risking the same fixed bitrate blowing past it.
+    target_max_mb = 40
+    audio_kbps = 192
+    video_kbps = max(400, int((target_max_mb * 8192) / max(duration, 1)) - audio_kbps)
+
     cmd = [
         "ffmpeg", "-y",
         "-i", silent_video_path,
@@ -284,7 +293,8 @@ def mux_with_audio_and_captions(silent_video_path: str, audio_path: str, segment
         "-vf", vf,
         "-map", "0:v", "-map", "1:a",
         "-c:v", "libx264", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "192k",
+        "-crf", "23", "-maxrate", f"{video_kbps}k", "-bufsize", f"{video_kbps * 2}k",
+        "-c:a", "aac", "-b:a", f"{audio_kbps}k",
         "-t", str(duration),
         out_path,
     ]

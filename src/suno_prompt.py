@@ -114,3 +114,48 @@ def generate(style: dict) -> dict:
     except Exception as e:  # noqa: BLE001 — never let this crash the daily run.
         print(f"[suno_prompt] Gemini failed ({e}); using fallback template.")
         return _fallback(style)
+
+
+METADATA_FROM_LYRICS_PROMPT = """A song was uploaded to a German rap
+("Deutschrap") channel called "{channel}" without a matching prompt on file —
+here is what was actually transcribed from the real audio:
+
+\"\"\"{lyrics}\"\"\"
+
+Based on these ACTUAL lyrics, write the metadata needed to publish it.
+
+Return ONLY valid JSON (no markdown fences) with exactly these keys:
+- "title": a catchy title in German (or German/English mix) matching the song's real content.
+- "description": a 3-5 sentence YouTube description IN GERMAN, written for
+  discovery (natural, searchable phrasing), mentioning it's an original song,
+  ending with a short line inviting the listener to follow/subscribe.
+- "tags": an array of 12-18 relevant lowercase search tags (mix of German and
+  English) matching the song's actual content and mood.
+"""
+
+
+def generate_metadata_from_lyrics(lyrics_text: str) -> dict:
+    """For an "orphan" upload with no matching daily-prompt context (see
+    poll_telegram.py) — derives title/description/tags AFTER the fact from
+    what was actually transcribed, instead of the pre-written prompt lyrics."""
+    prompt = METADATA_FROM_LYRICS_PROMPT.format(
+        channel=CONFIG["channel"]["name"], lyrics=lyrics_text[:3000],
+    )
+    try:
+        resp = requests.post(
+            GEMINI_URL, params={"key": env("GEMINI_API_KEY")},
+            json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=60,
+        )
+        resp.raise_for_status()
+        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+        data = json.loads(text)
+        print(f"[suno_prompt] Derived metadata from lyrics: {data['title']}")
+        return data
+    except Exception as e:  # noqa: BLE001
+        print(f"[suno_prompt] Metadata-from-lyrics failed ({e}); using generic fallback.")
+        return {
+            "title": "Neuer Track",
+            "description": "Ein originaler Deutschrap-Song. 100% Original, Text und Musik.",
+            "tags": ["deutschrap", "german rap", "original song", "new music"],
+        }

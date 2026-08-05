@@ -18,15 +18,20 @@ from .settings import CONFIG, OUTPUT_DIR
 
 
 def build_story_video(audio_path: str, style_tags: str, default_query: str,
-                       width: int, height: int, out_path: str) -> str | None:
-    """Returns the finished video path, or None if there wasn't enough to
-    work with — the caller should fall back to the simpler single-clip build."""
+                       width: int, height: int, out_path: str) -> tuple[str, str] | None:
+    """Returns (video_path, full_lyrics_text), or None if there wasn't enough
+    to work with — the caller should fall back to the simpler single-clip
+    build. The lyrics text is the actual transcribed words (not the original
+    Suno prompt) — useful for callers that need to generate title/description
+    metadata for a song with no pre-existing prompt context (see
+    poll_telegram.py's handling of "orphan" uploads)."""
     total_duration = probe_duration(audio_path)
 
     words = transcribe.transcribe_words(audio_path)
     if not words:
         print("[story_video] No speech detected; caller should fall back.")
         return None
+    full_lyrics_text = " ".join(w["text"] for w in words)
 
     lv_cfg = CONFIG.get("lyric_video", {})
     scene_windows = scenes_mod.chunk_into_scenes(
@@ -97,4 +102,4 @@ def build_story_video(audio_path: str, style_tags: str, default_query: str,
                                  duration=total_duration, width=width, height=height)
 
     print(f"[story_video] Built: {out_path}")
-    return out_path
+    return out_path, full_lyrics_text

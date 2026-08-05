@@ -3,28 +3,39 @@ builds the thumbnail + video for it and sends the finished video back to the
 group. Telegram has no push-to-GitHub webhook, so polling on a schedule is
 the free, reliable option.
 
+Works for TWO cases:
+1. A reply to today's prompt (the normal flow) — uses the pre-generated
+   title/description/tags/style from send_daily_prompt.py.
+2. An "orphan" upload with no matching prompt (uploaded any time, standalone)
+   — transcribes it, derives title/description/tags from what was actually
+   sung, and picks a generic visual style. Either way, any audio upload gets
+   a finished video back — nothing is silently ignored.
+
     python -m src.poll_telegram
 
-Called every ~10-15 min by .github/workflows/poll_telegram.yml.
+Called every ~5 min by .github/workflows/poll_telegram.yml.
 """
-from . import state, stock_video, story_video, telegram_bot, thumbnail, video
+from . import state, stock_video, story_video, suno_prompt, telegram_bot, thumbnail, video
 from .ffmpeg_utils import probe_duration, render_video_with_clip
 from .settings import CONFIG, OUTPUT_DIR
 
 
-def _build_video(style_tags: str, stock_query: str | None, background_path: str, audio_path: str) -> str:
+def _build_video(style_tags: str, stock_query: str | None, background_path: str,
+                  audio_path: str) -> tuple[str, str | None]:
     """Tries the full story-video build first (transcribed scenes matched to
-    real footage + synced subtitles). Falls back to a single looped stock
-    clip, then to the AI-image + zoom — never breaks the run either way."""
+    real footage + synced captions) — returns (video_path, transcribed_lyrics).
+    Falls back to a single looped stock clip, then to the AI-image + zoom —
+    never breaks the run either way, though the fallbacks don't transcribe,
+    so lyrics come back as None in that case."""
     v = CONFIG["video"]
     out_path = str(OUTPUT_DIR / "video.mp4")
 
     if stock_query:
-        story_path = story_video.build_story_video(
+        result = story_video.build_story_video(
             audio_path, style_tags, stock_query, v["width"], v["height"], out_path
         )
-        if story_path:
-            return story_path
+        if result:
+            return result
 
     if stock_query:
         clip_path = stock_video.fetch_background_clip(stock_query, v["width"], v["height"])
@@ -33,10 +44,10 @@ def _build_video(style_tags: str, stock_query: str | None, background_path: str,
             render_video_with_clip(clip_path, audio_path, out_path,
                                     width=v["width"], height=v["height"], duration=duration)
             print("[poll_telegram] Story build unavailable; used a single looped stock clip.")
-            return out_path
+            return out_path, None
 
     print("[poll_telegram] No stock footage available; using AI image + zoom instead.")
-    return video.make_video(background_path, audio_path)
+    return video.make_video(background_path, audio_path), None
 
 
 def _extract_audio(update: dict):
@@ -70,6 +81,45 @@ def _details_message(song: dict) -> str:
     return message[:4096]  # Telegram's hard message-length limit
 
 
+def _process_pending(audio_path: str, pending: dict) -> None:
+    """Normal flow: this upload is a reply to today's prompt, so we already
+    have rich title/description/tags/style generated ahead of time."""
+    song = pending["song"]
+    mood_like = {"visual": pending["visual"]}
+    title = song["title"]
+
+    background_path, thumb_path = thumbnail.make_thumbnail(mood_like, title)
+    video_path, _lyrics = _build_video(song.get("style_tags", pending["style_name"]),
+                                        pending.get("stock_query"), background_path, audio_path)
+
+    telegram_bot.send_photo(thumb_path, caption=f"Thumbnail: {title}")
+    telegram_bot.send_video(video_path, caption=title)
+    telegram_bot.send_message(_details_message(song))
+
+
+def _process_orphan(audio_path: str) -> None:
+    """No matching prompt on file — someone uploaded a song standalone. Still
+    builds a full video: picks a generic style for the visual fallback, lets
+    the real transcription drive scene-matching as usual, then derives
+    title/description/tags from what was ACTUALLY sung afterward."""
+    print("[poll_telegram] No pending prompt for this upload — treating as standalone.")
+    style = suno_prompt.pick_style()
+    mood_like = {"visual": style["visual"]}
+
+    background_path, thumb_path = thumbnail.make_thumbnail(mood_like, style["name"])
+    video_path, lyrics = _build_video(style["style_tags"], style.get("stock_query"),
+                                       background_path, audio_path)
+
+    song = suno_prompt.generate_metadata_from_lyrics(lyrics) if lyrics else {
+        "title": "Neuer Track", "description": "Ein originaler Song.", "tags": ["original song"],
+    }
+    title = song["title"]
+
+    telegram_bot.send_photo(thumb_path, caption=f"Thumbnail: {title}")
+    telegram_bot.send_video(video_path, caption=title)
+    telegram_bot.send_message(_details_message(song))
+
+
 def run():
     st = state.load()
     pending = st.get("pending")
@@ -82,9 +132,6 @@ def run():
     for update in updates:
         st["telegram_offset"] = update["update_id"] + 1
 
-        if not pending:
-            continue  # nothing waiting on an MP3 right now
-
         found = _extract_audio(update)
         if not found:
             continue
@@ -93,20 +140,13 @@ def run():
         print(f"[poll_telegram] Received {file_name}, building final video...")
         audio_path = telegram_bot.download_file(file_id, "suno_song.mp3")
 
-        song = pending["song"]
-        mood_like = {"visual": pending["visual"]}
-        title = song["title"]
+        if pending:
+            _process_pending(audio_path, pending)
+            pending = None
+            st["pending"] = None
+        else:
+            _process_orphan(audio_path)
 
-        background_path, thumb_path = thumbnail.make_thumbnail(mood_like, title)
-        video_path = _build_video(song.get("style_tags", pending["style_name"]),
-                                   pending.get("stock_query"), background_path, audio_path)
-
-        telegram_bot.send_photo(thumb_path, caption=f"Thumbnail: {title}")
-        telegram_bot.send_video(video_path, caption=title)
-        telegram_bot.send_message(_details_message(song))
-
-        pending = None
-        st["pending"] = None
         print("[poll_telegram] Sent finished video + full details to Telegram.")
 
     state.save(st)
