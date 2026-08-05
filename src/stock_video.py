@@ -12,7 +12,12 @@ from . import footage_quality
 from .settings import OUTPUT_DIR, env
 
 SEARCH_URL = "https://api.pexels.com/videos/search"
-MAX_QUALITY_CHECKS = 4  # cap Gemini-vision calls per search — bounds latency/cost
+# A typical video has ~9-10 shot groups, each potentially searching twice
+# (its own query + a default-query fallback) — at 4 checks each that's up to
+# ~40 Gemini vision calls in a few minutes, well past the free-tier per-minute
+# limit (confirmed by real 429s in production). 2 still catches most bad
+# framing while roughly halving call volume.
+MAX_QUALITY_CHECKS = 2
 
 
 def _pick_best_file(video_files: list, width: int, height: int):
