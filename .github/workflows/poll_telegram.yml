@@ -1,17 +1,26 @@
 name: Poll Telegram for finished song
 
-# Telegram has no push-to-GitHub webhook, so we check every 5 min (GitHub
-# Actions' minimum schedule interval) for a new MP3 reply. If one's there,
-# builds the thumbnail + video and sends the finished video back to the
-# group. Cheap and quick when there's nothing new. concurrency below queues
-# (doesn't cancel) if a build from the previous tick is still running.
+# Telegram has no push-to-GitHub webhook, so this checks periodically for a
+# new MP3 reply. GitHub's own `schedule:` trigger turned out to be severely
+# unreliable at high frequency in practice — measured gaps of 1-3.5 HOURS
+# between "every 5 minute" runs, not minutes. GitHub deprioritizes frequent
+# schedule triggers under load and gives no SLA on timing.
+#
+# Fix: self-chaining. Each run polls internally every ~45s for ~25 minutes
+# (real near-real-time coverage, not dependent on the scheduler at all), then
+# explicitly dispatches its own next run via the Actions API before exiting —
+# workflow_dispatch is specifically exempted from GitHub's anti-recursion
+# block on GITHUB_TOKEN, so this keeps the chain alive indefinitely. The
+# `schedule:` trigger stays only as a resurrection safety net in case the
+# chain ever breaks (e.g. a hard crash before the final dispatch step).
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "*/20 * * * *"
   workflow_dispatch:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: poll-telegram
@@ -20,10 +29,9 @@ concurrency:
 jobs:
   poll:
     runs-on: ubuntu-latest
-    # Story-video builds (transcription + multi-scene fetch/render) take
-    # longer than a quick check — generously budgeted, still cheap since
-    # nothing runs unless a new MP3 actually showed up this cycle.
-    timeout-minutes: 30
+    # ~25 min inner loop + generous buffer for a build that starts near the
+    # end of that window (transcription + multi-scene fetch/render is slow).
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -43,18 +51,25 @@ jobs:
           path: ~/.cache/huggingface
           key: whisper-small
 
-      - name: Check for a finished song and deliver it
+      - name: Poll every ~45s for ~25 minutes
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-        run: python -m src.poll_telegram
-
-      - name: Commit updated state
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add state/state.json
-          git diff --staged --quiet || git commit -m "State: poll checkpoint"
-          git push
+          end=$((SECONDS + 25*60))
+          while [ $SECONDS -lt $end ]; do
+            python -m src.poll_telegram || echo "[loop] iteration failed, continuing"
+            git add state/state.json
+            git diff --staged --quiet || (git commit -m "State: poll checkpoint" && git push)
+            sleep 45
+          done
+
+      - name: Chain the next run
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run "Poll Telegram for finished song" --repo ${{ github.repository }}
