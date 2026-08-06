@@ -15,7 +15,7 @@ STATE_PATH = ROOT / "state" / "state.json"
 def load() -> dict:
     if STATE_PATH.exists():
         return json.loads(STATE_PATH.read_text(encoding="utf-8"))
-    return {"telegram_offset": None, "pending": None}
+    return {"telegram_offset": None, "pending": None, "pending_date": None, "last_prompt_date": None}
 
 
 def save(state: dict) -> None:

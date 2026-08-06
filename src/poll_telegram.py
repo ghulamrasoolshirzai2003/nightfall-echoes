@@ -1,9 +1,11 @@
 """Entrypoint: checks Telegram for a newly uploaded MP3 reply, and if found,
 builds the thumbnail + video for it and sends the finished video back to the
-group. Telegram has no push-to-GitHub webhook, so polling on a schedule is
-the free, reliable option.
+group. Also guarantees the daily prompt goes out (see ensure_sent below) —
+called from a self-chaining loop that runs near-continuously, so neither of
+these depends on GitHub's own `schedule:` trigger, which has been observed
+to silently fail to fire reliably.
 
-Works for TWO cases:
+Works for TWO upload cases:
 1. A reply to today's prompt (the normal flow) — uses the pre-generated
    title/description/tags/style from send_daily_prompt.py.
 2. An "orphan" upload with no matching prompt (uploaded any time, standalone)
@@ -13,15 +15,25 @@ Works for TWO cases:
 
     python -m src.poll_telegram
 
-Called every ~5 min by .github/workflows/poll_telegram.yml.
+Called every ~45s by the inner loop in .github/workflows/poll_telegram.yml.
 """
-from . import state, stock_video, story_video, suno_prompt, telegram_bot, thumbnail, video
+from . import send_daily_prompt, state, stock_video, story_video, suno_prompt, telegram_bot, thumbnail, video
 from .ffmpeg_utils import probe_duration, render_video_with_clip
 from .settings import CONFIG, OUTPUT_DIR
 
 
+def _progress_notifier():
+    """Returns an on_progress(percent, message) callback that relays each
+    checkpoint to Telegram as a short "X% - message" update, so there's
+    visible movement during the several minutes a build takes instead of
+    total silence."""
+    def notify(percent: int, message: str) -> None:
+        telegram_bot.send_message(f"⏳ {percent}% — {message}")
+    return notify
+
+
 def _build_video(style_tags: str, stock_query: str | None, background_path: str,
-                  audio_path: str) -> tuple[str, str | None]:
+                  audio_path: str, on_progress) -> tuple[str, str | None]:
     """Tries the full story-video build first (transcribed scenes matched to
     real footage + synced captions) — returns (video_path, transcribed_lyrics).
     Falls back to a single looped stock clip, then to the AI-image + zoom —
@@ -32,7 +44,8 @@ def _build_video(style_tags: str, stock_query: str | None, background_path: str,
 
     if stock_query:
         result = story_video.build_story_video(
-            audio_path, style_tags, stock_query, v["width"], v["height"], out_path
+            audio_path, style_tags, stock_query, v["width"], v["height"], out_path,
+            on_progress=on_progress,
         )
         if result:
             return result
@@ -90,7 +103,8 @@ def _process_pending(audio_path: str, pending: dict) -> None:
 
     background_path, thumb_path = thumbnail.make_thumbnail(mood_like, title)
     video_path, _lyrics = _build_video(song.get("style_tags", pending["style_name"]),
-                                        pending.get("stock_query"), background_path, audio_path)
+                                        pending.get("stock_query"), background_path, audio_path,
+                                        _progress_notifier())
 
     telegram_bot.send_photo(thumb_path, caption=f"Thumbnail: {title}")
     telegram_bot.send_video(video_path, caption=title)
@@ -108,7 +122,7 @@ def _process_orphan(audio_path: str) -> None:
 
     background_path, thumb_path = thumbnail.make_thumbnail(mood_like, style["name"])
     video_path, lyrics = _build_video(style["style_tags"], style.get("stock_query"),
-                                       background_path, audio_path)
+                                       background_path, audio_path, _progress_notifier())
 
     song = suno_prompt.generate_metadata_from_lyrics(lyrics) if lyrics else {
         "title": "Neuer Track", "description": "Ein originaler Song.", "tags": ["original song"],
@@ -121,6 +135,18 @@ def _process_orphan(audio_path: str) -> None:
 
 
 def run():
+    # Guarantees a prompt goes out every day without depending on GitHub's
+    # separate (unreliable) once-a-day schedule trigger — this function gets
+    # called every ~45s via the self-chaining loop, so "hasn't today's prompt
+    # been sent yet" gets checked constantly rather than once. Isolated in
+    # its own try/except — a hiccup here (e.g. a transient Telegram/Gemini
+    # error) must never block this cycle from still processing a waiting
+    # audio upload.
+    try:
+        send_daily_prompt.ensure_sent()
+    except Exception as e:  # noqa: BLE001
+        print(f"[poll_telegram] ensure_sent failed ({e}); continuing anyway.")
+
     st = state.load()
     pending = st.get("pending")
 
@@ -143,7 +169,7 @@ def run():
         # received vs. still waiting on the next poll cycle.
         telegram_bot.send_message(
             f"🎧 Got \"{file_name}\" — generating your video now. "
-            "This usually takes about 5-10 minutes, I'll send it here when it's ready."
+            "This usually takes about 5-10 minutes, I'll send progress updates here."
         )
         audio_path = telegram_bot.download_file(file_id, "suno_song.mp3")
 

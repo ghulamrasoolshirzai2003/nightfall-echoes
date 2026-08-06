@@ -10,9 +10,17 @@ name: Poll Telegram for finished song
 # (real near-real-time coverage, not dependent on the scheduler at all), then
 # explicitly dispatches its own next run via the Actions API before exiting —
 # workflow_dispatch is specifically exempted from GitHub's anti-recursion
-# block on GITHUB_TOKEN, so this keeps the chain alive indefinitely. The
-# `schedule:` trigger stays only as a resurrection safety net in case the
-# chain ever breaks (e.g. a hard crash before the final dispatch step).
+# block on GITHUB_TOKEN, so this keeps the chain alive indefinitely.
+#
+# Every step below has its OWN timeout-minutes. Without that, a single stuck
+# step (observed for real: `apt-get install` hung 18+ minutes on a flaky
+# runner) can eat the whole job timeout before "Chain the next run" ever gets
+# a chance to run — silently killing the chain with no recovery until the
+# schedule backstop (itself unreliable) eventually fires. A short per-step
+# timeout turns a hang into a fast failure, and "Chain the next run" has
+# `if: always()` so it fires regardless of what failed above it — the chain
+# self-heals from almost any single-step failure without needing anyone to
+# notice and manually restart it.
 on:
   schedule:
     - cron: "*/20 * * * *"
@@ -29,29 +37,33 @@ concurrency:
 jobs:
   poll:
     runs-on: ubuntu-latest
-    # ~25 min inner loop + generous buffer for a build that starts near the
-    # end of that window (transcription + multi-scene fetch/render is slow).
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+        timeout-minutes: 3
 
       - name: Install ffmpeg
+        timeout-minutes: 5
         run: sudo apt-get update && sudo apt-get install -y ffmpeg fonts-dejavu-core
 
       - uses: actions/setup-python@v5
+        timeout-minutes: 5
         with:
           python-version: "3.11"
           cache: pip
 
       - run: pip install -r requirements-telegram.txt
+        timeout-minutes: 8
 
       - name: Cache Whisper model
+        timeout-minutes: 5
         uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
           key: whisper-small
 
       - name: Poll every ~45s for ~25 minutes
+        timeout-minutes: 30
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -70,6 +82,13 @@ jobs:
 
       - name: Chain the next run
         if: always()
+        timeout-minutes: 3
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh workflow run "Poll Telegram for finished song" --repo ${{ github.repository }}
+        run: |
+          for i in 1 2 3; do
+            gh workflow run "Poll Telegram for finished song" --repo ${{ github.repository }} && exit 0
+            echo "Dispatch attempt $i failed, retrying in 10s..."
+            sleep 10
+          done
+          echo "::warning::Failed to chain the next run after 3 attempts — the schedule backstop will eventually recover it."
