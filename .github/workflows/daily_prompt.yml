@@ -5,7 +5,11 @@ name: Daily Suno prompt
 # same chat — poll_telegram.yml picks that up and builds the final video.
 on:
   schedule:
-    - cron: "0 6 * * *"
+    # NOT on the hour deliberately — GitHub documents that schedules firing
+    # exactly on the hour are the most likely to be delayed during high load
+    # (observed: one run arrived 2.5h late, another didn't fire for over an
+    # hour past due). Off-peak minute makes this meaningfully more reliable.
+    - cron: "17 6 * * *"
   workflow_dispatch:
 
 permissions:
