@@ -16,16 +16,9 @@ group's scenes — same real people throughout, because it's the same shot.
 """
 import json
 
-import requests
-
 from . import beats as beats_mod
-from .settings import CONFIG, env
-
-GEMINI_MODEL = "gemini-flash-latest"  # alias that always points to the current model
-GEMINI_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{GEMINI_MODEL}:generateContent"
-)
+from . import gemini
+from .settings import CONFIG
 
 COLOR_MOODS = ["warm_romantic", "cool_melancholic", "vibrant_energetic", "moody_dark"]
 
@@ -193,14 +186,8 @@ def plan_visuals(scenes: list[dict], style_tags: str, default_query: str) -> dic
         color_moods=", ".join(COLOR_MOODS), n=len(scenes), max_index=len(scenes) - 1,
     )
     try:
-        resp = requests.post(
-            GEMINI_URL, params={"key": env("GEMINI_API_KEY")},
-            json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=60,
-        )
-        resp.raise_for_status()
-        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-        text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        data = json.loads(text)
+        text = gemini.generate_text(prompt, timeout=60, max_retries=2)
+        data = json.loads(gemini.strip_json_fences(text))
         if not _validate(data, len(scenes)):
             raise ValueError(f"Gemini returned malformed/incomplete group plan: {data}")
         print(f"[scenes] Planned {len(data['groups'])} shot groups over {len(scenes)} scenes, "

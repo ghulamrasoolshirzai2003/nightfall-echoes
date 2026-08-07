@@ -9,15 +9,8 @@ Falls back to a safe template if the API ever hiccups, so the daily run never di
 import json
 import random
 
-import requests
-
-from .settings import CONFIG, env
-
-GEMINI_MODEL = "gemini-flash-latest"  # alias that always points to the current model
-GEMINI_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{GEMINI_MODEL}:generateContent"
-)
+from . import gemini
+from .settings import CONFIG
 
 PROMPT = """You are a YouTube growth expert running an aesthetic instrumental music
 channel called "{channel} {emoji}". Today's track mood is "{mood}" ({keywords}).
@@ -58,16 +51,8 @@ def generate(mood: dict) -> dict:
         keywords=", ".join(mood["keywords"]),
     )
     try:
-        resp = requests.post(
-            GEMINI_URL,
-            params={"key": env("GEMINI_API_KEY")},
-            json={"contents": [{"parts": [{"text": prompt}]}]},
-            timeout=60,
-        )
-        resp.raise_for_status()
-        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-        text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        data = json.loads(text)
+        text = gemini.generate_text(prompt, timeout=60, max_retries=2)
+        data = json.loads(gemini.strip_json_fences(text))
         # Merge in base tags and de-dupe.
         data["tags"] = list(dict.fromkeys(list(data.get("tags", [])) + CONFIG["upload"]["base_tags"]))
         print(f"[concept] Gemini title: {data['title']}")

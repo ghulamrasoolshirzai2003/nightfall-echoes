@@ -12,15 +12,8 @@ that risk; imitating an identifiable song or artist does not.
 import json
 import random
 
-import requests
-
-from .settings import CONFIG, env
-
-GEMINI_MODEL = "gemini-flash-latest"  # alias that always points to the current model
-GEMINI_URL = (
-    "https://generativelanguage.googleapis.com/v1beta/models/"
-    f"{GEMINI_MODEL}:generateContent"
-)
+from . import gemini
+from .settings import CONFIG
 
 PROMPT = """You are a German rap ("Deutschrap") songwriter for a music channel
 called "{channel}". Today's style is "{style_name}": {style_tags}. Theme
@@ -101,14 +94,8 @@ def generate(style: dict) -> dict:
         lyric_theme=style["lyric_theme"],
     )
     try:
-        resp = requests.post(
-            GEMINI_URL, params={"key": env("GEMINI_API_KEY")},
-            json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=60,
-        )
-        resp.raise_for_status()
-        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-        text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        data = json.loads(text)
+        text = gemini.generate_text(prompt, timeout=60, max_retries=2)
+        data = json.loads(gemini.strip_json_fences(text))
         print(f"[suno_prompt] Generated: {data['title']}")
         return data
     except Exception as e:  # noqa: BLE001 — never let this crash the daily run.
@@ -142,14 +129,8 @@ def generate_metadata_from_lyrics(lyrics_text: str) -> dict:
         channel=CONFIG["channel"]["name"], lyrics=lyrics_text[:3000],
     )
     try:
-        resp = requests.post(
-            GEMINI_URL, params={"key": env("GEMINI_API_KEY")},
-            json={"contents": [{"parts": [{"text": prompt}]}]}, timeout=60,
-        )
-        resp.raise_for_status()
-        text = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-        text = text.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
-        data = json.loads(text)
+        text = gemini.generate_text(prompt, timeout=60, max_retries=2)
+        data = json.loads(gemini.strip_json_fences(text))
         print(f"[suno_prompt] Derived metadata from lyrics: {data['title']}")
         return data
     except Exception as e:  # noqa: BLE001
