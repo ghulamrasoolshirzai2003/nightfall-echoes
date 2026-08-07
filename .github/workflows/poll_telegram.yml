@@ -76,7 +76,21 @@ jobs:
           while [ $SECONDS -lt $end ]; do
             python -m src.poll_telegram || echo "[loop] iteration failed, continuing"
             git add state/state.json
-            git diff --staged --quiet || (git commit -m "State: poll checkpoint" && git push)
+            if ! git diff --staged --quiet; then
+              git commit -m "State: poll checkpoint"
+              # daily_prompt.yml can commit around the same time — a real
+              # race between the two was observed in production (push
+              # rejected). An unhandled failure here used to be able to kill
+              # this whole 25-min loop early; retry instead.
+              pushed=0
+              for i in 1 2 3 4 5; do
+                if git push; then pushed=1; break; fi
+                echo "Push rejected (attempt $i), pulling and retrying..."
+                git pull --rebase -X ours origin master
+                sleep 3
+              done
+              [ "$pushed" = "1" ] || echo "[loop] state push failed after retries, continuing anyway"
+            fi
             sleep 45
           done
 

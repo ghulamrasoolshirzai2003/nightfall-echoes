@@ -1,10 +1,12 @@
 name: Daily song
 
-# Runs every day. GitHub cron is UTC; 06:00 UTC ≈ a good global posting time.
-# You can also trigger it by hand from the Actions tab (workflow_dispatch).
+# System A (fully-automatic instrumental -> YouTube) — NOT the system in
+# active use (that's "Daily Suno prompt" + "Poll Telegram for finished
+# song"). Schedule disabled: this was failing every day since YT_REFRESH_TOKEN
+# was never configured (System B was chosen instead), just cluttering the
+# Actions history with red X's. Still manually runnable via workflow_dispatch
+# if System A is ever wanted later — see SETUP.md Parts B/C to configure it.
 on:
-  schedule:
-    - cron: "0 6 * * *"
   workflow_dispatch:
 
 # Prevent overlapping runs.
