@@ -1,6 +1,33 @@
 {
   "telegram_offset": 54335447,
-  "pending": null,
-  "pending_date": "2026-08-06",
-  "last_prompt_date": "2026-08-06"
+  "pending": {
+    "style_name": "Deutschrap Strassenrap",
+    "visual": "gritty urban street at night, graffiti walls, dramatic streetlight, cinematic European city",
+    "stock_query": "urban street night graffiti",
+    "song": {
+      "title": "K\u00e4lte & Beton",
+      "style_tags": "German rap, Deutschrap, street rap, aggressive male vocals, hard-hitting 808s, dark gritty beat, raw street sound, fast confident flow, heavy bass, dark atmospheric trap",
+      "lyrics": "[Verse 1]\nAus dem Keller hoch ins Flutlicht, keiner hat an uns geglaubt\nDamals auf der Parkbank, Mucke laut und Augen taub\nGrauer Schotter, kalter Regen, Taschen leer, doch Blick nach vorn\nWir haben Schmerz in Wut verwandelt, in den Bl\u00f6cken neu geboren\nKeine Reichen-Eltern-Kohle, alles selber aufgebaut\nHeute rollt der Bass durchs Viertel, weil der Kreis nur Br\u00fcdern traut\nNarben zeigen, wo du herkommst, Scheine zeigen, wo du stehst\nWichtig ist nur, mit wem du teilst und mit wem du durch die H\u00f6lle gehst\n\n[Chorus]\nK\u00e4lte und Beton, wir kommen ganz von unten hoch\nEchter Respekt, Junge, zahlst du hier mit deinem Wort\nBlut in den Adern und die Br\u00fcder stehen fest im Kreis\nHustle jeden Tag, denn nur Loyalit\u00e4t hat ihren Preis\nK\u00e4lte und Beton, aus dem Dreck direkt ins Rampenlicht\nWer verr\u00e4t, der f\u00e4llt \u2013 ein echter Mann bricht seine Ehre nicht!\n\n[Verse 2]\nJeden Schritt im Schlamm get\u00e4tigt, nix geschenkt bekommen vom Leben\nIhre Spr\u00fcche interessieren nicht, wir sind hier um alles zu nehmen\nVon der Stra\u00dfe auf die Playlist, 808 knallt durch die Nacht\nHaben aus der Armut Mucke und aus Hunger Gold gemacht\nHalte Abstand von Fake-Freunden, schaue wer im Regen bleibt\nWenn der Sturm kommt, siehst du klarer, wer die Story mit dir schreibt\nKeine Gnade f\u00fcr Verr\u00e4ter, Ehrenkodex unbereut\nNightfall Echoes am Mikrofon, wir bleiben unserer Herkunft treu\n\n[Chorus]\nK\u00e4lte und Beton, wir kommen ganz von unten hoch\nEchter Respekt, Junge, zahlst du hier mit deinem Wort\nBlut in den Adern und die Br\u00fcder stehen fest im Kreis\nHustle jeden Tag, denn nur Loyalit\u00e4t hat ihren Preis\nK\u00e4lte und Beton, aus dem Dreck direkt ins Rampenlicht\nWer verr\u00e4t, der f\u00e4llt \u2013 ein echter Mann bricht seine Ehre nicht!\n\n[Bridge]\nGanze N\u00e4chte wach geblieben, Plan geschmiedet aufm Kiez\nKein Erbe, kein Kredit, nur der Hunger der uns schiebt\nSchau die Hochhausfassaden, h\u00f6r den Bass in deiner Brust\nWir haben gelernt zu k\u00e4mpfen, als man unten k\u00e4mpfen musst'\n\n[Chorus]\nK\u00e4lte und Beton, wir kommen ganz von unten hoch\nEchter Respekt, Junge, zahlst du hier mit deinem Wort\nBlut in den Adern und die Br\u00fcder stehen fest im Kreis\nHustle jeden Tag, denn nur Loyalit\u00e4t hat ihren Preis\nK\u00e4lte und Beton, aus dem Dreck direkt ins Rampenlicht\nWer verr\u00e4t, der f\u00e4llt \u2013 ein echter Mann bricht seine Ehre nicht!",
+      "description": "\u201eK\u00e4lte & Beton\u201c ist ein kompromissloser Deutschrap-Track direkt aus dem Herzen der Stra\u00dfe. Mit d\u00fcsteren 808-B\u00e4ssen, aggressivem Flow und ehrlichen Lyrics erz\u00e4hlen Nightfall Echoes vom harterk\u00e4mpften Aufstieg und unersch\u00fctterlicher Loyalit\u00e4t unter Br\u00fcdern. Dieser Song ist eine Hymne an alle, die sich von ganz unten durch den grauen Asphalt nach oben gek\u00e4mpft haben. Lass ein Like da und abonniere Nightfall Echoes f\u00fcr weitere authentische Deutschrap-Tracks!",
+      "tags": [
+        "deutschrap",
+        "german rap",
+        "strassenrap",
+        "street rap",
+        "808 bass",
+        "dark trap",
+        "hip hop deutschland",
+        "aufstieg von unten",
+        "loyalit\u00e4t",
+        "underground rap",
+        "aggressive rap",
+        "nightfall echoes",
+        "deutschrap 2025",
+        "asphalt rap",
+        "raw street sound"
+      ]
+    }
+  },
+  "pending_date": "2026-08-07",
+  "last_prompt_date": "2026-08-07"
 }
