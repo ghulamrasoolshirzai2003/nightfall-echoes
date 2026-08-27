@@ -1,28 +1,28 @@
 {
   "telegram_offset": 54335451,
   "pending": {
-    "style_name": "Deutschrap Emotional",
-    "visual": "lonely figure in a rainy European city at night, moody blue tones, cinematic, introspective",
-    "stock_query": "person alone city night rain",
+    "style_name": "Deutschrap Strassenrap",
+    "visual": "gritty urban street at night, graffiti walls, dramatic streetlight, cinematic European city",
+    "stock_query": "urban street night graffiti",
     "song": {
-      "title": "Deutschrap Emotional Heute Nacht",
-      "style_tags": "German rap, Deutschrap, emotional rap, melodic hook, introspective, piano-driven trap production",
-      "lyrics": "[Verse 1]\nIch geh durch die Einsamkeit, sp\u00fcr die Stra\u00dfe unter mir\nJedes Licht ruft meinen Namen, ich wei\u00df genau, wer ich bin\n\n[Chorus]\nDas ist unser Moment, wir brechen durch\nNichts h\u00e4lt uns auf, wir geben nicht auf\n\n[Verse 2]\nJeder Schritt durch die Einsamkeit, heute Nacht\nWir jagen was echt ist, halten fest, was uns tr\u00e4gt\n\n[Chorus]\nDas ist unser Moment, wir brechen durch\nNichts h\u00e4lt uns auf, wir geben nicht auf\n\n[Bridge]\nAuch wenn's dunkel wird, wir finden das Licht\n\n[Chorus]\nDas ist unser Moment, wir brechen durch\nNichts h\u00e4lt uns auf, wir geben nicht auf\n",
-      "description": "Deutschrap Emotional Heute Nacht \u2014 ein originaler Deutschrap-Song. 100% Original, Text und Musik. Folge dem Kanal f\u00fcr mehr.\n\n#deutschrap #deutschrapemotional #newmusic",
+      "title": "Deutschrap Strassenrap Heute Nacht",
+      "style_tags": "German rap, Deutschrap, street rap, hard-hitting 808s, gritty raw sound, aggressive confident flow",
+      "lyrics": "[Verse 1]\nIch geh durch die Stra\u00dfenleben, sp\u00fcr die Stra\u00dfe unter mir\nJedes Licht ruft meinen Namen, ich wei\u00df genau, wer ich bin\n\n[Chorus]\nDas ist unser Moment, wir brechen durch\nNichts h\u00e4lt uns auf, wir geben nicht auf\n\n[Verse 2]\nJeder Schritt durch die Stra\u00dfenleben, heute Nacht\nWir jagen was echt ist, halten fest, was uns tr\u00e4gt\n\n[Chorus]\nDas ist unser Moment, wir brechen durch\nNichts h\u00e4lt uns auf, wir geben nicht auf\n\n[Bridge]\nAuch wenn's dunkel wird, wir finden das Licht\n\n[Chorus]\nDas ist unser Moment, wir brechen durch\nNichts h\u00e4lt uns auf, wir geben nicht auf\n",
+      "description": "Deutschrap Strassenrap Heute Nacht \u2014 ein originaler Deutschrap-Song. 100% Original, Text und Musik. Folge dem Kanal f\u00fcr mehr.\n\n#deutschrap #deutschrapstrassenrap #newmusic",
       "tags": [
-        "deutschrap emotional",
+        "deutschrap strassenrap",
         "deutschrap",
         "german rap",
         "original song",
         "new music",
         "rap deutsch",
-        "Einsamkeit",
-        "Zweifel",
-        "Hoffnung",
-        "verlorene Liebe"
+        "Stra\u00dfenleben",
+        "Aufstieg von unten",
+        "Loyalit\u00e4t",
+        "Respekt"
       ]
     }
   },
-  "pending_date": "2026-08-26",
-  "last_prompt_date": "2026-08-26"
+  "pending_date": "2026-08-27",
+  "last_prompt_date": "2026-08-27"
 }
